@@ -1,0 +1,56 @@
+import pandas as pd
+import sklearn
+from sklearn.linear_model import LogisticRegressionCV
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import accuracy_score, plot_roc_curve
+import numpy as np
+import matplotlib.pyplot as plt
+
+file = pd.read_csv('b_depressed.csv')
+df = pd.DataFrame(file)
+df = df.drop(['Survey_id','Ville_id'], axis = 1)
+datas = df.dropna(how='any')
+
+col_x = datas.columns[:-1]
+X = pd.DataFrame(datas,columns = col_x)
+Y = pd.DataFrame(datas,columns = ['depressed'])
+
+X_train,X_test,Y_train,Y_test = train_test_split(X, Y, test_size = 0.3, random_state = 1)
+
+ss = StandardScaler()
+X_train = ss.fit_transform(X_train)
+
+lr = LogisticRegressionCV(multi_class = 'ovr',penalty = 'l2', solver = 'lbfgs', tol = 1e-4)
+re = lr.fit(X_train,np.ravel(Y_train))
+
+acc = accuracy_score(Y_test,Y_predict)
+print("The accuracy score of this model is ",acc)
+
+X_test = ss.fit_transform(X_test)
+Y_predict = lr.predict(X_test)
+
+plot_roc_curve(lr,X_train,Y_train)
+plot_roc_curve(lr,X_test,Y_test)
+
+from sklearn.ensemble import RandomForestClassifier
+import brewer2mpl
+
+rf = RandomForestClassifier()
+cf = rf.fit(X_train,np.ravel(Y_train))
+
+Feature_importance = pd.DataFrame({'Feature': col_x, 'Importance': cf.feature_importances_})
+Feature_importance = Feature_importance.sort_values(by='Importance',ascending=False)
+Feature_importance.set_index('Feature',inplace=True)
+
+bmap = brewer2mpl.get_map('Set3', 'qualitative', 10)
+colors = bmap.mpl_colors
+colors = colors + colors
+
+Feature_importance = Feature_importance[Feature_importance.Importance!=0]
+plt.figure(figsize=(15,8))
+plt.barh(Feature_importance.index,Feature_importance.Importance,color = colors)
+plt.title('Feature vs Importance')
+plt.xlabel('Importance')
+plt.ylabel('Feature')
+plt.show()
